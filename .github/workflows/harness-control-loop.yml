@@ -17,6 +17,13 @@
 
 name: Harness Control Loop
 
+# PR 코멘트 게시에 필요한 권한 명시
+# GitHub Actions 기본값은 read-only이므로 write 권한을 명시해야 한다.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 on:
   push:
     branches: ["**"]
