@@ -68,7 +68,7 @@ jobs:
       # ── Gate 3: 불변 규칙 검증 ───────────────────────────
       - name: "[Gate 3] 불변 규칙 검증 [INV-1 ~ INV-5]"
         id: invariants
-        run: npx jest --testPathPattern="test|spec" --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage
+        run: npx jest --testPathPatterns="test|spec" --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage
         # 실패 시 에이전트에게:
         #   [INV-1] DIVISION_BY_ZERO 실패 → divide()의 첫 줄 if(b===0) 검사 확인
         #   [INV-3] 입력 검증 실패 → validation/index.ts의 validateDivisor() 확인
