@@ -63,7 +63,7 @@ run_loop() {
   # ── Gate 3: 불변 규칙 ────────────────────────────────────
   echo ""
   echo -e "${BLUE}[Gate 3] 불변 규칙 검증 [INV-1 ~ INV-5]${NC}"
-  if npx jest --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage 2>&1; then
+  if npx jest --testNamePattern="\[INV-|\[EVAL-1\]" --no-coverage 2>&1; then
     gate_pass "불변 규칙 통과"
   else
     gate_fail "불변 규칙 실패"
