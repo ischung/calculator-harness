@@ -1,0 +1,118 @@
+# .github/workflows/harness-control-loop.yml
+#
+# 하네스 컨트롤 루프 (Harness Control Loop)
+#
+# 목적:
+#   에이전트가 생성한 코드를 자동으로 검증하고,
+#   실패 결과를 PR 코멘트로 게시하여 에이전트가 읽고 재시도할 수 있게 한다.
+#
+# 루프 흐름:
+#   에이전트 코드 push
+#     → Gate 1: 타입 안전성 (tsc)
+#     → Gate 2: 아키텍처 제약 (eslint - 의존성 방향)
+#     → Gate 3: 불변 규칙 검증 (jest [INV])
+#     → Gate 4: 수학적 정확성 (jest [EVAL])
+#     ↓ 실패 시: 에러 요약을 PR에 코멘트 → 에이전트가 읽고 수정 → 재push → 루프
+#     ↓ 성공 시: 머지 허용
+
+name: Harness Control Loop
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  control-loop:
+    name: Harness Control Loop
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 준비 ─────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Gate 1: 타입 안전성 ───────────────────────────────
+      - name: "[Gate 1] TypeScript 타입 검사"
+        id: typecheck
+        run: npx tsc --noEmit
+        # 실패 시 에이전트에게: 타입 오류 메시지를 읽고 types/calc.ts와 비교하라
+
+      # ── Gate 2: 아키텍처 제약 ─────────────────────────────
+      - name: "[Gate 2] 아키텍처 의존성 방향 검사 (eslint)"
+        id: lint
+        run: npx eslint . --ext .ts --max-warnings 0
+        # 실패 시 에이전트에게:
+        #   [ARCH] 오류 → ARCHITECTURE.md의 의존성 방향을 확인하라
+        #   [INV] 오류  → throw를 CalculationResult { ok:false } 로 교체하라
+
+      # ── Gate 3: 불변 규칙 검증 ───────────────────────────
+      - name: "[Gate 3] 불변 규칙 검증 [INV-1 ~ INV-5]"
+        id: invariants
+        run: npx jest --testPathPattern="test|spec" --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage
+        # 실패 시 에이전트에게:
+        #   [INV-1] DIVISION_BY_ZERO 실패 → divide()의 첫 줄 if(b===0) 검사 확인
+        #   [INV-3] 입력 검증 실패 → validation/index.ts의 validateDivisor() 확인
+
+      # ── Gate 4: 수학적 정확성 Eval ───────────────────────
+      - name: "[Gate 4] 수학적 정확성 전체 Eval"
+        id: evals
+        run: npx jest --no-coverage
+        # 실패 시 에이전트에게: docs/evals.md의 해당 EVAL 시나리오를 확인하라
+
+      # ── 실패 시 피드백 주입 (컨트롤 루프의 핵심) ───────────
+      - name: "피드백 주입: PR에 실패 원인 게시"
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const steps = {
+              typecheck: '${{ steps.typecheck.outcome }}',
+              lint:      '${{ steps.lint.outcome }}',
+              invariants:'${{ steps.invariants.outcome }}',
+              evals:     '${{ steps.evals.outcome }}',
+            };
+
+            const failed = Object.entries(steps)
+              .filter(([, v]) => v === 'failure')
+              .map(([k]) => k);
+
+            const gateMessages = {
+              typecheck:  '**[Gate 1] tsc 실패**: `types/calc.ts` 타입 정의를 확인하고 TypeScript 오류를 수정하라.',
+              lint:       '**[Gate 2] ESLint 실패**: `[ARCH]` 오류는 의존성 방향 위반, `[INV]` 오류는 throw 사용 금지 위반이다. `ARCHITECTURE.md`를 참조하라.',
+              invariants: '**[Gate 3] 불변 규칙 실패**: `[INV-1]` 실패 시 `divide()`와 `validateDivisor()`에서 b=0 검사를 확인하라. `docs/invariants.md` 참조.',
+              evals:      '**[Gate 4] Eval 실패**: `docs/evals.md`의 실패한 EVAL 시나리오를 확인하고 해당 함수를 수정하라.',
+            };
+
+            const body = [
+              '## 🔴 하네스 컨트롤 루프 — 실패 피드백',
+              '',
+              '다음 게이트를 통과하지 못했다. **에이전트는 아래 지시를 읽고 수정 후 재push하라.**',
+              '',
+              ...failed.map(k => `- ${gateMessages[k]}`),
+              '',
+              '### 자가 수정 체크리스트',
+              '- [ ] `npx tsc --noEmit` 로컬 실행 → 오류 없음 확인',
+              '- [ ] `npx eslint . --ext .ts` 로컬 실행 → 위반 없음 확인',
+              '- [ ] `npx jest --no-coverage` 로컬 실행 → 전체 통과 확인',
+              '- [ ] 위 3개 모두 통과 후 push',
+              '',
+              '> 이 메시지는 하네스 컨트롤 루프가 자동 생성했다.',
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

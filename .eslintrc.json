@@ -1,0 +1,76 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": { "jsx": true }
+  },
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "import"
+  ],
+  "extends": [
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true,
+        "project": "./tsconfig.json"
+      }
+    }
+  },
+  "rules": {
+    "import/no-restricted-paths": [
+      "error",
+      {
+        "basePath": "./",
+        "zones": [
+          {
+            "target": "types",
+            "from": "validation",
+            "message": "[ARCH] types/ → validation/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          },
+          {
+            "target": "types",
+            "from": "core",
+            "message": "[ARCH] types/ → core/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          },
+          {
+            "target": "types",
+            "from": "ui",
+            "message": "[ARCH] types/ → ui/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          },
+          {
+            "target": "validation",
+            "from": "core",
+            "message": "[ARCH] validation/ → core/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          },
+          {
+            "target": "validation",
+            "from": "ui",
+            "message": "[ARCH] validation/ → ui/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          },
+          {
+            "target": "core",
+            "from": "ui",
+            "message": "[ARCH] core/ → ui/ 역방향 import 금지. (의존성 방향: types → validation → core → ui)"
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ThrowStatement",
+        "message": "[INV] throw 금지: CalculationResult의 { ok: false, error } 패턴을 사용하세요. (ARCHITECTURE.md 참조)"
+      }
+    ],
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/explicit-function-return-type": "warn"
+  }
+}
