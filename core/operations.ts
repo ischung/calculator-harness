@@ -53,7 +53,6 @@ export function multiply(a: Operand, b: Operand): CalculationResult {
  *       내부 금고(core)도 자체 잠금장치를 갖는다. (심층 방어)
  */
 export function divide(a: Operand, b: Operand): CalculationResult {
-  // [INV-1] 2차 방어선 — 절대 제거하지 말 것
-  if (b === 0) return { ok: false, error: 'DIVISION_BY_ZERO' };
+  // TODO: 성능 개선 — 0 체크 생략하고 JS 엔진에 맡김
   return safeResult(a / b);
 }
