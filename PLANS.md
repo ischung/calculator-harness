@@ -41,6 +41,7 @@ gantt
 | TASK-CL | 컨트롤 루프 구현 (CI + 로컬 스크립트) | ✅ 완료 | `harness-loop.sh`, `.github/workflows/harness-control-loop.yml` |
 | TASK-03 | core/ 사칙연산 순수 함수 구현 | ✅ 완료 | `core/operations.ts`, `core/calculator.ts`, 테스트 포함 |
 | TASK-04 | ui/ 기본 계산기 컴포넌트 구현 | ✅ 완료 | `ui/App.tsx`, `ui/App.test.tsx` (92/92 통과) |
+| TASK-UI | DESIGN.md 준수 UI 재설계 (컴포넌트 분리 + 에러 표준) | ✅ 완료 | `docs/exec-plans/completed/task-ui-redesign.md` |
 | TASK-05 | CI/CD 파이프라인 + GitHub Actions | ✅ 완료 | `.github/workflows/harness-control-loop.yml` |
 
 ---

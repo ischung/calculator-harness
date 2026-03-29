@@ -3,15 +3,17 @@
  * @jest-environment jsdom
  *
  * EVAL-1 ~ EVAL-5 시나리오를 UI 레벨에서 검증한다.
- * [INV-1] 0 나누기 에러 메시지가 반드시 표시되어야 한다.
+ *
+ * [DESIGN] 에러 표시 구조 변경 반영:
+ *   - display-value: 숫자 값 (에러 시에도 유지)
+ *   - display-error: 에러 메시지 별도 영역 (#D32F2F + ⚠️)
  */
 
-// react-jsx transform이므로 React import 불필요 (JSX 변환 자동)
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
 
-// ── 헬퍼: 버튼 클릭 시퀀스 ──────────────────────────────────
+// ── 헬퍼 ─────────────────────────────────────────────────────
 function clickKeys(keys: string[]): void {
   keys.forEach(key => {
     const testId =
@@ -26,6 +28,12 @@ function clickKeys(keys: string[]): void {
 
 function getDisplayValue(): string {
   return screen.getByTestId('display-value').textContent ?? '';
+}
+
+// [DESIGN] 에러 메시지는 display-error 에서 확인
+function getErrorMessage(): string {
+  const el = screen.queryByTestId('display-error');
+  return el?.textContent ?? '';
 }
 
 // =============================================================================
@@ -117,12 +125,20 @@ describe('[EVAL-5] 나눗셈', () => {
 
 // =============================================================================
 // [INV-1] 0 나누기 → 에러 메시지 표시
+// [DESIGN] 에러: display-error 영역에 ⚠️ 와 함께, display-value는 숫자 유지
 // =============================================================================
 describe('[INV-1] 0 나누기 방어 — UI 레벨', () => {
-  it('10 ÷ 0 → "0으로 나눌 수 없습니다" 표시', () => {
+  it('10 ÷ 0 → display-error에 "0으로 나눌 수 없습니다" 표시', () => {
     render(<App />);
     clickKeys(['1','0', '/', '0', '=']);
-    expect(getDisplayValue()).toBe('0으로 나눌 수 없습니다');
+    expect(getErrorMessage()).toContain('0으로 나눌 수 없습니다');
+  });
+
+  it('에러 시 display-value는 숫자를 유지한다 (값/에러 분리)', () => {
+    render(<App />);
+    clickKeys(['1','0', '/', '0', '=']);
+    // [DESIGN] 에러 메시지가 값을 덮어쓰지 않는다
+    expect(getDisplayValue()).not.toBe('0으로 나눌 수 없습니다');
   });
 
   it('에러 메시지 role="alert" 접근성 속성', () => {
@@ -134,9 +150,10 @@ describe('[INV-1] 0 나누기 방어 — UI 레벨', () => {
   it('에러 후 C를 누르면 초기화된다', () => {
     render(<App />);
     clickKeys(['1', '/', '0', '=']);
-    expect(getDisplayValue()).toBe('0으로 나눌 수 없습니다');
+    expect(getErrorMessage()).toContain('0으로 나눌 수 없습니다');
     clickKeys(['C']);
     expect(getDisplayValue()).toBe('0');
+    expect(screen.queryByTestId('display-error')).not.toBeInTheDocument();
   });
 
   it('에러 후 새 숫자를 누르면 새 계산이 시작된다', () => {
@@ -144,6 +161,7 @@ describe('[INV-1] 0 나누기 방어 — UI 레벨', () => {
     clickKeys(['1', '/', '0', '=']);
     clickKeys(['5', '+', '3', '=']);
     expect(getDisplayValue()).toBe('8');
+    expect(screen.queryByTestId('display-error')).not.toBeInTheDocument();
   });
 });
 
