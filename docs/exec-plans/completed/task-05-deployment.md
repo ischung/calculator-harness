@@ -1,6 +1,6 @@
 # TASK-05: GitHub Pages 자동 배포 파이프라인
 
-- 상태: 🔄 진행중
+- 상태: ✅ 완료 (2026-03-29) — https://ischung.github.io/calculator-harness/
 - 목표: 하네스 검증(Lint + Evals)을 통과한 코드만 GitHub Pages에 자동 배포한다
 - 완료 기준:
   - [x] `.github/workflows/deploy.yml` 생성
