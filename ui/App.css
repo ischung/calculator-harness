@@ -1,0 +1,256 @@
+/* ============================================================
+   ui/App.css — 사칙연산 계산기 스타일
+   [DESIGN] DESIGN.md의 UX/UI 표준을 CSS로 구현한다.
+   ============================================================ */
+
+/* ── 전역 리셋 ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 앱 레이아웃 ───────────────────────────────────────────── */
+.app-wrapper {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+/* ── 계산기 본체 ───────────────────────────────────────────── */
+.calculator {
+  width: 320px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 1px 0 rgba(255, 255, 255, 0.15) inset;
+  outline: none;
+}
+
+/* ── 디스플레이 ─────────────────────────────────────────────── */
+.display {
+  padding: 28px 24px 20px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.display-expression {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.5px;
+  min-height: 20px;
+  transition: opacity 0.2s;
+  word-break: break-all;
+  text-align: right;
+}
+
+.display-value {
+  font-size: 52px;
+  font-weight: 300;
+  color: #ffffff;
+  letter-spacing: -1px;
+  line-height: 1;
+  word-break: break-all;
+  text-align: right;
+  transition: color 0.2s, font-size 0.15s;
+}
+
+.display-value.is-long  { font-size: 36px; }
+.display-value.is-error {
+  color: #ff6b6b;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* [DESIGN] 에러 메시지: 값 아래 별도 영역, 색상 #D32F2F (DESIGN.md 명세) */
+.display-error {
+  font-size: 13px;
+  font-weight: 500;
+  color: #D32F2F;        /* [DESIGN] DESIGN.md 에러 색상 */
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+  animation: shake 0.35s ease;
+}
+
+/* 에러 흔들기 애니메이션 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+/* ── 키패드 ─────────────────────────────────────────────────── */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px;
+}
+
+/* ── 버튼 공통 ──────────────────────────────────────────────── */
+.btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  font-size: 22px;
+  font-weight: 400;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s, transform 0.1s, box-shadow 0.1s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover  { background: rgba(255, 255, 255, 0.14); }
+.btn:active { transform: scale(0.93); background: rgba(255, 255, 255, 0.06); }
+
+.btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* ── 버튼 변형 ──────────────────────────────────────────────── */
+
+/* 연산자: 주황/앰버 */
+.btn-operator {
+  color: #ff9f0a;
+  font-size: 26px;
+  font-weight: 300;
+  background: rgba(255, 159, 10, 0.12);
+}
+.btn-operator:hover  { background: rgba(255, 159, 10, 0.22); }
+.btn-operator:active { background: rgba(255, 159, 10, 0.08); }
+
+/* 선택된 연산자 */
+.btn-operator.is-active {
+  background: #ff9f0a;
+  color: #1a1a2e;
+}
+.btn-operator.is-active:hover { background: #ffb340; }
+
+/* 등호: 보라 그라디언트 */
+.btn-equals {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 26px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+}
+.btn-equals:hover  { background: linear-gradient(135deg, #7b93f5 0%, #8b5ab8 100%); }
+.btn-equals:active { transform: scale(0.91); }
+
+/* 지우기: 붉은 계열 */
+.btn-clear {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  font-size: 17px;
+  font-weight: 500;
+  grid-column: span 2;
+}
+.btn-clear:hover  { background: rgba(255, 107, 107, 0.2); }
+.btn-clear:active { background: rgba(255, 107, 107, 0.07); }
+
+/* 백스페이스 */
+.btn-backspace {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 20px;
+}
+
+/* 0 버튼: 2칸 차지, 텍스트 왼쪽 정렬 */
+.btn-zero {
+  grid-column: span 2;
+  justify-content: flex-start;
+  padding-left: 28px;
+}
+
+/* ── 히스토리 패널 ───────────────────────────────────────────── */
+.history-panel {
+  width: 240px;
+  max-height: 480px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+}
+
+.history-header {
+  padding: 14px 18px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.history-list::-webkit-scrollbar { width: 4px; }
+.history-list::-webkit-scrollbar-track { background: transparent; }
+.history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.history-item {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  animation: slideIn 0.2s ease;
+  cursor: default;
+}
+.history-item:hover { background: rgba(255,255,255,0.04); }
+
+.history-item-expr {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 2px;
+}
+
+.history-item-result {
+  font-size: 18px;
+  font-weight: 300;
+  color: #ffffff;
+}
+.history-item-result.is-error { color: #ff6b6b; font-size: 13px; }
+
+/* ── 반응형 ─────────────────────────────────────────────────── */
+@media (max-width: 620px) {
+  .app-wrapper { flex-direction: column; align-items: center; }
+  .history-panel { width: 320px; max-height: 200px; }
+}

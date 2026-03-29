@@ -17,6 +17,13 @@
 
 name: Harness Control Loop
 
+# PR 코멘트 게시에 필요한 권한 명시
+# GitHub Actions 기본값은 read-only이므로 write 권한을 명시해야 한다.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 on:
   push:
     branches: ["**"]
@@ -36,11 +43,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"   # LTS — npm ci 호환성 확보
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        # npm ci 대신 npm install 사용:
+        # 로컬(Node 25/npm 11)과 CI(Node 22/npm 10)의 lock 파일 해석 차이를 우회
+        run: npm install --legacy-peer-deps
 
       # ── Gate 1: 타입 안전성 ───────────────────────────────
       - name: "[Gate 1] TypeScript 타입 검사"
@@ -59,7 +68,7 @@ jobs:
       # ── Gate 3: 불변 규칙 검증 ───────────────────────────
       - name: "[Gate 3] 불변 규칙 검증 [INV-1 ~ INV-5]"
         id: invariants
-        run: npx jest --testPathPattern="test|spec" --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage
+        run: npx jest --testPathPatterns="test|spec" --testNamePattern="\[INV\]|\[EVAL-1\]" --no-coverage
         # 실패 시 에이전트에게:
         #   [INV-1] DIVISION_BY_ZERO 실패 → divide()의 첫 줄 if(b===0) 검사 확인
         #   [INV-3] 입력 검증 실패 → validation/index.ts의 validateDivisor() 확인

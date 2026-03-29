@@ -12,6 +12,7 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/ui/**/*.test.tsx'],
       transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }] },
+      moduleNameMapper: { '\\.(css|scss|sass)$': '<rootDir>/ui/__mocks__/fileMock.js' },
     },
   ],
   collectCoverageFrom: ['types/**/*.ts', 'validation/**/*.ts', 'core/**/*.ts', 'ui/**/*.tsx'],
