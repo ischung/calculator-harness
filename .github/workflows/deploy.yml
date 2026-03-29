@@ -1,0 +1,141 @@
+# .github/workflows/deploy.yml
+#
+# 하네스 배포 파이프라인 (Harness Deployment Pipeline)
+#
+# 목적:
+#   RELIABILITY.md 정책을 준수하여 신뢰성이 검증된 코드만 사용자에게 배포한다.
+#   "신뢰성이 검증되지 않은 코드는 사용자에게 절대 노출하지 않는다."
+#
+# 파이프라인 흐름:
+#   [lint]  Gate 1+2: 타입 안전성 + 아키텍처 제약 검증   ─┐
+#                                                          ├─ 둘 다 통과 시 → [deploy]
+#   [evals] Gate 3+4: 불변 규칙 + 수학적 정확성 검증     ─┘
+#
+#   Fail-fast: lint 또는 evals 중 하나라도 실패하면 배포 즉시 중단
+#
+# 보호하는 불변 규칙:
+#   [INV-1] 0 나누기 방어 — evals Job이 검증
+#   [INV-2] 수학적 정확성 — evals Job이 검증
+#   [INV-3] 입력 검증 레이어 — lint Job(ESLint 의존성 방향)이 강제
+#   [INV-4] UI가 core를 직접 호출 금지 — lint Job(ESLint 아키텍처 규칙)이 강제
+#
+# RELIABILITY.md 연결:
+#   lint  → "타입 안전성" + Safety Boundary(출력 경계)
+#   evals → "수학적 정확성" + "안전한 실패" + "예측 가능성"
+#   deploy → 위 두 증명이 완료된 후에만 사용자에게 노출
+
+name: Deploy to GitHub Pages
+
+# main 브랜치에 push될 때만 배포
+# PR에는 배포하지 않는다 — 하네스 컨트롤 루프(harness-control-loop.yml)가 담당
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # 수동 트리거 (긴급 재배포 시)
+
+# GitHub Pages 배포에 필요한 최소 권한만 부여 (최소 권한 원칙)
+permissions:
+  contents: read      # 코드 체크아웃
+  pages: write        # GitHub Pages 배포
+  id-token: write     # OIDC 토큰 (actions/deploy-pages 인증)
+
+# 동시 배포 방지: 이전 배포가 진행 중이면 새 배포가 취소하고 실행
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: 타입 안전성 + 아키텍처 제약 검증 ────────────────────────────
+  lint:
+    name: "[Gate 1+2] 타입 안전성 · 아키텍처 검증"
+    runs-on: ubuntu-latest
+    # RELIABILITY.md: "타입 안전성 = 잘못된 타입이 runtime에 도달하는 것을 방지"
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 의존성 설치
+        run: npm install --legacy-peer-deps
+
+      - name: "[Gate 1] TypeScript 타입 검사"
+        # [INV-3] 보호: 타입 위반 = 잘못된 레이어 계약 위반 조기 탐지
+        run: npx tsc --noEmit
+
+      - name: "[Gate 2] 아키텍처 의존성 방향 검사"
+        # [INV-3][INV-4] 보호: types→validation→core→ui 방향 강제
+        # 역방향 import = 레이어 계약 위반 = 즉시 차단
+        run: npx eslint . --ext .ts --max-warnings 0
+
+  # ── Job 2: 불변 규칙 + 수학적 정확성 검증 ─────────────────────────────
+  evals:
+    name: "[Gate 3+4] 불변 규칙 · 수학적 정확성 Eval"
+    runs-on: ubuntu-latest
+    # RELIABILITY.md 신뢰성 철학 세 가지 모두 검증:
+    #   수학적 정확성 / 안전한 실패 / 예측 가능성
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 의존성 설치
+        run: npm install --legacy-peer-deps
+
+      - name: "[Gate 3] 불변 규칙 검증 [INV-1 ~ INV-5]"
+        # [INV-1] 보호: divide(a,0) → DIVISION_BY_ZERO (절대 Infinity 반환 금지)
+        # [INV-2] 보호: 수학적 정확성 기본 케이스
+        run: npx jest --testPathPatterns="test|spec" --testNamePattern="\[INV-|\[EVAL-1\]" --no-coverage
+
+      - name: "[Gate 4] 수학적 정확성 전체 Eval"
+        # RELIABILITY.md 신뢰성 등급 A(Essential): 기본 사칙연산 100% 정확
+        # UI 레벨 통합 테스트 포함 — 사용자가 실제 경험하는 정확성 검증
+        run: npx jest --no-coverage
+
+  # ── Job 3: 빌드 + GitHub Pages 배포 ───────────────────────────────────
+  deploy:
+    name: "빌드 + GitHub Pages 배포"
+    needs: [lint, evals]   # lint AND evals 모두 성공해야만 실행
+    # Fail-fast: 위 두 Job 중 하나라도 실패하면 이 Job은 실행되지 않는다
+    # RELIABILITY.md: "신뢰성이 검증되지 않은 코드는 사용자에게 절대 노출하지 않는다"
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}   # 배포 완료 후 URL 표시
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 의존성 설치
+        run: npm install --legacy-peer-deps
+
+      - name: GitHub Pages용 프로덕션 빌드
+        # GITHUB_PAGES=true → vite.config.ts에서 base: '/calculator-harness/' 적용
+        # base 경로 없으면 JS/CSS 자산을 루트(/)에서 찾아 404 발생
+        run: GITHUB_PAGES=true npm run build
+
+      - name: GitHub Pages 아티팩트 업로드
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist   # Vite 빌드 출력 디렉토리
+
+      - name: GitHub Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # 이 단계가 성공하면 사용자가 접근 가능한 URL에 최신 코드가 배포된다

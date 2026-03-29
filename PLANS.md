@@ -43,6 +43,7 @@ gantt
 | TASK-04 | ui/ 기본 계산기 컴포넌트 구현 | ✅ 완료 | `ui/App.tsx`, `ui/App.test.tsx` (92/92 통과) |
 | TASK-UI | DESIGN.md 준수 UI 재설계 (컴포넌트 분리 + 에러 표준) | ✅ 완료 | `docs/exec-plans/completed/task-ui-redesign.md` |
 | TASK-05 | CI/CD 파이프라인 + GitHub Actions | ✅ 완료 | `.github/workflows/harness-control-loop.yml` |
+| TASK-06 | GitHub Pages 자동 배포 파이프라인 | 🔄 진행중 | `.github/workflows/deploy.yml` |
 
 ---
 
@@ -57,6 +58,7 @@ gantt
 | TASK-03 | core/ 순수 함수 | 2026-03-29 | `core/operations.ts`, `core/calculator.ts` |
 | TASK-04 | ui/App.tsx 구현 | 2026-03-29 | `ui/App.tsx` |
 | TASK-05 | CI/CD GitHub Actions | 2026-03-29 | `.github/workflows/` |
+| TASK-06 | GitHub Pages 자동 배포 | 진행중 | `.github/workflows/deploy.yml` |
 
 ---
 
